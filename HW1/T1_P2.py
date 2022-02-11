@@ -30,10 +30,24 @@ x_test = np.arange(0, 12, .1)
 print("y is:")
 print(y_train)
 
+def kernel(x1, x2, tau):
+    return np.exp(-pow((x1 - x2), 2) / tau)
+
 def predict_knn(k=1, tau=1):
     """Returns predictions for the values in x_test, using KNN predictor with the specified k."""
-    # TODO: your code here
-    return np.zeros(len(x_test))
+    # Compute the distance between each test point and training point. Each row is a test point.
+    x_train_dists = kernel(np.tile(x_train, (x_test.size, 1)),
+        np.tile(np.array([x_test]).transpose(), (1, x_train.size)), tau)
+
+    # Get the K nearest neighbors for each test point (i.e. for each row).
+    x_train_indices = np.fliplr(np.argsort(x_train_dists)) # Sort in descending order.
+    neighbor_indices = np.delete(x_train_indices, np.s_[k:np.shape(x_train_indices)[1]], axis=1)
+    y_train_neighbors = np.take(y_train, neighbor_indices)
+
+    # Calculate predictions by averaging the neighboring y-values.
+    predictions = np.mean(y_train_neighbors, axis = 1)
+
+    return predictions
 
 
 def plot_knn_preds(k):

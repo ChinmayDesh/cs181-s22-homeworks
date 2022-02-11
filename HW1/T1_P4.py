@@ -4,11 +4,12 @@
 # Start Code
 ##################
 
+from asyncio import SubprocessTransport
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
-csv_filename = 'data/year-sunspots-republicans.csv'
+csv_filename = '/Users/chinmay/Documents/GitHub/cs181-s22-homeworks/HW1/data/year-sunspots-republicans.csv'
 years  = []
 republican_counts = []
 sunspot_counts = []
@@ -35,21 +36,6 @@ republican_counts = np.array(republican_counts)
 sunspot_counts = np.array(sunspot_counts)
 last_year = 1985
 
-# Plot the data.
-plt.figure(1)
-plt.plot(years, republican_counts, 'o')
-plt.xlabel("Year")
-plt.ylabel("Number of Republicans in Congress")
-plt.figure(2)
-plt.plot(years, sunspot_counts, 'o')
-plt.xlabel("Year")
-plt.ylabel("Number of Sunspots")
-plt.figure(3)
-plt.plot(sunspot_counts[years<last_year], republican_counts[years<last_year], 'o')
-plt.xlabel("Number of Sunspots")
-plt.ylabel("Number of Republicans in Congress")
-plt.show()
-
 # Create the simplest basis, with just the time and an offset.
 X = np.vstack((np.ones(years.shape), years)).T
 
@@ -68,8 +54,21 @@ def make_basis(xx,part='a',is_years=True):
     if part == "a" and not is_years:
         xx = xx/20
         
-        
-    return None
+    basis = np.ones(xx.shape) # Bias term
+    if part == 'a':
+        for j in range(1, 6):
+            basis = np.vstack((basis, pow(xx, j)))
+    elif part == 'b':
+        for j in range(1960, 2011, 5):
+            basis = np.vstack((basis, (np.exp((-1 * (xx-j)**2) / 25))))
+    elif part == 'c':
+        for j in range(1, 6):
+            basis = np.vstack((basis, np.cos(xx / j)))
+    elif part == 'd':
+        for j in range (1, 26):
+            basis = np.vstack((basis, np.cos(xx / j)))
+    basis = basis.T
+    return basis
 
 # Nothing fancy for outputs.
 Y = republican_counts
@@ -79,16 +78,54 @@ def find_weights(X,Y):
     w = np.dot(np.linalg.pinv(np.dot(X.T, X)), np.dot(X.T, Y))
     return w
 
+def get_rss(Yhat, Y):
+    return np.sum(np.power((Y - Yhat), 2))
+
 # Compute the regression line on a grid of inputs.
 # DO NOT CHANGE grid_years!!!!!
 grid_years = np.linspace(1960, 2005, 200)
-grid_X = np.vstack((np.ones(grid_years.shape), grid_years))
-grid_Yhat  = np.dot(grid_X.T, w)
 
-# TODO: plot and report sum of squared error for each basis
+# Plot and report sum of squared error for each basis
+for i, letter in enumerate(['a', 'b', 'c', 'd']):
+    plt.subplot(2, 2, i+1)
 
-# Plot the data and the regression line.
-plt.plot(years, republican_counts, 'o', grid_years, grid_Yhat, '-')
-plt.xlabel("Year")
-plt.ylabel("Number of Republicans in Congress")
+    X_basis = make_basis(years, part=letter, is_years=True)
+    weights = find_weights(X_basis, Y)
+    Yhat = np.dot(X_basis, weights)
+    rss = get_rss(Yhat, Y)
+
+    grid_X_basis = make_basis(grid_years, part=letter, is_years=True)
+    grid_Yhat = np.dot(grid_X_basis, weights)
+
+    plt.plot(years, republican_counts, 'o', grid_years, grid_Yhat, '-')
+    plt.xlabel("Year")
+    plt.ylabel("# Republicans in Senate")
+    plt.title("Basis \"" + letter + "\" \n" +
+        "Residual sum of squares: " + str(round(rss, 2)))
+plt.suptitle("Year vs. Number of Republicans in the Senate")
+plt.tight_layout()
+plt.show()
+
+# Sunspots vs. Republicans.
+
+grid_sunspots = np.linspace(np.amin(sunspot_counts), np.amax(sunspot_counts), 200)
+
+for i, letter in enumerate(['a', 'c', 'd']):
+    plt.subplot(2, 2, i+1)
+
+    X_basis = make_basis(sunspot_counts[0:13], part=letter, is_years=False)
+    weights = find_weights(X_basis, Y[0:13])
+    Yhat = np.dot(X_basis, weights)
+    rss = get_rss(Yhat, Y[0:13])
+
+    grid_X_basis = make_basis(grid_sunspots, part=letter, is_years=False)
+    grid_Yhat = np.dot(grid_X_basis, weights)
+
+    plt.plot(sunspot_counts, republican_counts, 'o', grid_sunspots, grid_Yhat, '-')
+    plt.xlabel("# Sunspots")
+    plt.ylabel("# Republicans in Senate")
+    plt.title("Basis \"" + letter + "\" \n" +
+        "Residual sum of squares: " + str(round(rss, 2)))
+plt.suptitle("Number of Sunspots vs. Number of Republicans in the Senate")
+plt.tight_layout()
 plt.show()
