@@ -172,7 +172,37 @@ in the command-line using \texttt{python T1\_P1\_TestCases.py}.
 
 \end{enumerate}
   
-\end{framed}  
+\end{framed}
+
+\begin{enumerate}
+    \item Since we are minimizing the sum of squared residuals, we use the L2 loss, defining it as follows:
+    \begin{equation*}
+        \mcL(\tau) = \sum_{n=1}^N (y_n - f(x_n))^2.
+    \end{equation*}
+    And, using the above definitions for $f$ and $K$,
+    \begin{align*}
+        f(x_i) &= \sum_{n=1}^N K(x_n, x_i) y_n - y_i \\
+        &= \sum_{n=1}^N \exp \left( \frac{-||x_n - x_i||_2^2}{\tau} \right) y_n - y_i.
+    \end{align*}
+    We subtract $y_i$ from the sum because the sum itself includes the point for which we are making a prediction, which we must exclude.  For that point, the kernel is 1, so the term we must exclude is merely $y_i$.
+    Plugging the above in to our expression for $\mcL$, we have
+    \begin{equation*}
+        \mcL(\tau) = \sum_{n=1}^N \left( 2y_n - \sum_{m=1}^N \exp \left( \frac{-||x_m - x_n||_2^2}{\tau} \right) y_m \right)^2.
+    \end{equation*}
+    
+    \item By the chain rule,
+    \begin{equation*}
+        \frac{\partial}{\partial \tau}\mcL(\tau) = -2 \sum_{n=1}^N \left( 2y_n - \sum_{m=1}^N \exp \left( \frac{-||x_m - x_n||_2^2}{\tau} \right) y_m \right) \left( \sum_{m=1}^N || x_m - x_n ||_2^2 \frac{\exp \left( -||x_m - x_n||_2^2 / \tau \right)}{\tau^2} y_m \right).
+    \end{equation*}
+
+    \item \includegraphics[scale=0.7]{part_1.png}
+    
+    For the provided data, $\mcL(0.01) = 8.75$, $\mcL(2) \approx 3.305$, and $\mcL(100) \approx 120.359$.  From these loss values, $\tau = 2$ seems to be the lengthscale that does best.
+    
+    \item At $\tau = 0.01$, the prediction drops to near $0$ whenever $x^*$ is not immediately adjacent to a point in the training data.  At $\tau = 2$, the prediction curve is much smoother, but still more or less reflects the location of each point in the training data.  At $\tau = 100$, the prediction curve is very smooth, reflecting the general shape of the data but not the individual variations of each training point.  Moreover, since our kernel is not normalized, the predictions when $\tau = 2$ and $\tau = 100$ are systematically higher than the true values, and this bias is especially egregious when $\tau = 100$.
+    
+    \item After performing gradient descent for 100 iterations from $\tau = 2$ with a step size of 0.05, the optimal $\tau$ seems to be 1.706, for which the loss is 3.205.
+\end{enumerate}
 
 \newpage
 
@@ -221,6 +251,16 @@ As before, you will plot $x^*$ on the x-axis and the prediction $f(x^*)$ on the 
 \end{enumerate}
 
 \end{problem}
+
+\begin{enumerate}
+    \item \includegraphics[scale=0.5]{k1.png}
+    \includegraphics[scale=0.5]{k3.png}
+    \includegraphics[scale=0.5]{k6.png}
+    
+    \item Unlike in Problem 1, these predictions are not smooth.  Furthermore, the kernel-regression prediction falls away as it gets farther from all points, especially with small $\tau$; however, this is not the case with kNN regression.  For this reason, they never extrapolate similarly, and there are no $k$ and $\tau$ such that both regressors produce the same result.  However, with large $\tau$ and $k$, the two do interpolate similarly (provided that the kernel is normalized).
+    
+    \item The kNN algorithm only cares about the relative distance of points, not the absolute distance.  Varying $\tau$ changes the absolute distance, but not the relative distance, so it is irrelevant in this situation.
+\end{enumerate}
 
 
 \newpage 
@@ -273,6 +313,57 @@ $y$ are scalars, $w$ is also a scalar.
 \end{enumerate}
 
 \end{problem}
+
+\begin{enumerate}
+    \item We are told that the expected squared loss is given by $E_{x,y}[(y - \hat{y})^2]$.  We can expand this expression to
+    \begin{equation*}
+        E_{x,y}(y^2 - 2y\hat{y} + \hat{y}^2),
+    \end{equation*}
+    Now, by the linearity of expectation, and using the fact that $\hat{y} = wx$,
+    \begin{align*}
+        E_{x,y}(y^2 - 2y\hat{y} + \hat{y}^2) &= E_y(y^2) - 2E_{x,y}(y\hat{y}) + E_x(\hat{y})^2 \\
+        &= E_y(y^2) - 2E_{x,y}(ywx) + E_x[(wx)^2] \\
+        &= E_y(y^2) - 2w E_{x,y}(xy) + w^2 E_x(x^2).
+    \end{align*}
+    We are trying to find the value of $w$ that minimizes this expression.  But with respect to $w$, this is simply a quadratic polynomial, so it is a convex function whose absolute minimum is located where the derivative with respect to $w$ is zero.  So, we can take the derivative with respect to $w$,
+    \begin{equation*}
+        \frac{\partial}{\partial w} \left[ E_y(y^2) - 2w E_{x,y}(xy) + w^2 E_x(x^2) \right] = -2 E_{x,y}(xy) + 2w E_x(x^2),
+    \end{equation*}
+    set it to zero, and solve for $w$, which gives us that the optimal $w$ is given by
+    \begin{equation*}
+        w^* = \frac{E_{x,y}(xy)}{E_x(x^2)}.
+    \end{equation*}
+    
+    \item We can use the second sample moment of $x$ to estimate $E_x(x^2)$. That is,
+    \begin{equation*}
+        E_x(x^2) \approx \frac{1}{N} \sum_{n=1}^N {x_n}^2
+    \end{equation*}
+    for large $N$.  The law of large numbers guarantees that the sample second moment converges to the expectation of the second moment as $N \rightarrow \infty$. Likewise,
+    \begin{equation*}
+        E_{x,y}(xy) \approx \frac{1}{N} \sum_{n=1}^N x_n y_n
+    \end{equation*}
+    for large $N$, by the same reasoning.
+    
+    \item Substituting the empirical moments we found in part (2) into the expression we found in part (1),
+    \begin{equation*}
+        w^* = \frac{1/N \sum_{n=1}^N x_n y_n}{1/N \sum_{n=1}^N {x_n}^2} = \frac{\sum_{n=1}^N x_n y_n}{\sum_{n=1}^N {x_n}^2}.
+    \end{equation*}
+    The optimal solution we found by matrix differentiation is
+    \begin{equation*}
+        w^* = (X^T X)^{-1}X^T \mathbf{y}.
+    \end{equation*}
+    Since in this case our features are one-dimensional, the design matrix $X$ is $N \times 1$.  Accordingly, we write $X$ as the column vector $\mathbf{x}$, rendering the above equation as follows:
+    \begin{equation*}
+        w^* = (\mathbf{x}^T \mathbf{x})^{-1} \mathbf{x}^T \mathbf{y}.
+    \end{equation*}
+    But $\mathbf{x}^T \mathbf{x}$ is a scalar, so its inverse is simply its reciprocal.  Then, expanding, we can see that
+    \begin{equation*}
+        w^* = \frac{\mathbf{x}^T\mathbf{x}}{\mathbf{x}^T\mathbf{y}} = \frac{\sum_{n=1}^N x_n y_n}{\sum_{n=1}^N {x_n}^2},
+    \end{equation*}
+    which is the same as the expression for $w^*$ that we found by minimizing expected error.
+    
+    \item No.  The law of large numbers holds for any distribution, so the above derivations hold whether or not $x$ and $y$ are jointly Gaussian.
+\end{enumerate}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -357,18 +448,30 @@ Given the quality of this fit, do you believe that the number of sunspots contro
 \end{enumerate}
 \end{framed}
 
+\begin{enumerate}
+    \item \includegraphics[scale=0.8]{r1.png}
+    
+    \item \includegraphics[scale=0.8]{r2.png}
+    
+    It seems that basis A provides the "best" fit.  Even though its error is highest, it seems to generalize the best.  However, the fit is still extremely poor, suggesting that the number of sunspots does not, in fact, control the number of Republicans in the Senate.
+\end{enumerate}
+
 
 
 \newpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Name and Calibration
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Name}
+\subsection*{Name} Chinmay Deshpande
 
 \subsection*{Collaborators and Resources}
 Whom did you work with, and did you use any resources beyond cs181-textbook and your notes?
 
+I worked with Michelle Lu and Arnav Srivastava.
+
 \subsection*{Calibration}
-Approximately how long did this homework take you to complete (in hours)? 
+Approximately how long did this homework take you to complete (in hours)?
+
+It took about 4 hours.
 
 \end{document}
