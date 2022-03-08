@@ -21,11 +21,11 @@ def basis1(x):
 
 # TODO: Implement this
 def basis2(x):
-    return None
+    return np.stack([np.ones(len(x)), x, x**2], axis=1)
 
 # TODO: Implement this
 def basis3(x):
-    return None
+    return np.stack([np.ones(len(x)), x, x**2, x**3, x**4, x**5], axis=1)
 
 class LogisticRegressor:
     def __init__(self, eta, runs):
@@ -37,17 +37,26 @@ class LogisticRegressor:
     def __dummyPrivateMethod(self, input):
         return None
 
-    # TODO: Optimize w using gradient descent
     def fit(self, x, y, w_init=None):
         # Keep this if case for the autograder
         if w_init is not None:
             self.W = w_init
         else:
             self.W = np.random.rand(x.shape[1], 1)
+        
+        ETA = 0.001
+        N_STEPS = 10000
 
-    # TODO: Fix this method!
+        for _ in range(N_STEPS):
+            grad = np.array([np.mean(x * (self.predict(x) - y), axis=0)]).T
+            self.W = self.W - ETA * grad
+
     def predict(self, x):
-        return np.dot(x, self.W)
+        pred_x = np.empty(0)
+        for row in x:
+            pred_x = np.concatenate((pred_x, sigmoid(np.dot(row, self.W))))
+        return np.array([pred_x]).T
+
 
 # Function to visualize prediction lines
 # Takes as input last_x, last_y, [list of models], basis function, title
@@ -111,15 +120,13 @@ if __name__ == "__main__":
     runs = 10000
     N = 30
 
-    # TODO: Make plot for each basis with all 10 models on each plot
-
-    # For example:
-    all_models = []
-    for _ in range(10):
-        x, y = generate_data(N)
-        x_transformed = basis1(x)
-        model = LogisticRegressor(eta=eta, runs=runs)
-        model.fit(x_transformed, y)
-        all_models.append(model)
-    # Here x and y contain last dataset:
-    visualize_prediction_lines(x, y, all_models, basis1, "exampleplot")
+    for i, basis in enumerate([basis1, basis2, basis3]):
+        all_models = []
+        for _ in range(10):
+            x, y = generate_data(N)
+            x_transformed = basis(x)
+            model = LogisticRegressor(eta=eta, runs=runs)
+            model.fit(x_transformed, y)
+            all_models.append(model)
+        # Here x and y contain last dataset:
+        visualize_prediction_lines(x, y, all_models, basis, "Predictions Based on Basis " + str(i+1))
